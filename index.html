@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>⛏️ MINECRAFT 2D · Damian Kita</title>
+    <!-- Pixelowy klimat Minecraft -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges; 
+            image-rendering: -moz-crisp-edges;
+            image-rendering: pixelated;
+            -webkit-font-smoothing: none;
+            font-smooth: never;
+        }
+
+        body {
+            background: #1a1e22;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100dvh;
+            font-family: 'Press Start 2P', monospace, system-ui;
+            padding: 12px;
+            margin: 0;
+            touch-action: pan-y; 
+        }
+
+        .game-wrapper {
+            max-width: 950px;
+            width: 100%;
+            background: #2d2d2d;
+            border: 6px solid #4a4a4a;
+            box-shadow: 0 0 0 2px #1e1e1e, 0 10px 20px rgba(0,0,0,0.6);
+            border-radius: 16px;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* GŁÓWNY CANVAS – pixel perfect */
+        .canvas-container {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: #0f0f0f;
+            border: 4px solid #5a5a5a;
+            border-radius: 10px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: #8b8b8b;
+            image-rendering: crisp-edges; /* piksele */
+            image-rendering: pixelated;
+            touch-action: none; /* blokada przewijania podczas gry */
+            cursor: crosshair;
+        }
+
+        /* PANEL STEROWANIA – dotyk + info */
+        .control-panel {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+            gap: 12px;
+            background: #3a3a3a;
+            padding: 15px 12px;
+            border-radius: 20px;
+            border: 3px solid #5f5f5f;
+        }
+
+        .dpad {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dpad-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .dpad-btn {
+            background: #4e4e4e;
+            border: 4px outset #7a7a7a;
+            border-radius: 16px;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 32px;
+            color: white;
+            text-shadow: 3px 3px 0 #000;
+            box-shadow: 0 6px 0 #2a2a2a;
+            transition: 0.05s ease;
+            touch-action: manipulation;
+            cursor: pointer;
+        }
+
+        .dpad-btn:active {
+            border-style: inset;
+            box-shadow: 0 2px 0 #2a2a2a;
+            transform: translateY(4px);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .action-btn {
+            background: #a06b3c;
+            border: 5px outset #c49a6c;
+            border-radius: 18px;
+            padding: 14px 20px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #ffd7a0;
+            text-shadow: 3px 3px 0 #4a2c1a;
+            box-shadow: 0 7px 0 #5a3a1e;
+            transition: 0.04s;
+            font-family: 'Press Start 2P', monospace;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            touch-action: manipulation;
+        }
+
+        .action-btn:active {
+            border-style: inset;
+            box-shadow: 0 2px 0 #5a3a1e;
+            transform: translateY(5px);
+        }
+
+        .hotbar {
+            background: #262626;
+            padding: 10px 18px;
+            border-radius: 40px;
+            border: 3px solid #707070;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .block-preview {
+            width: 48px;
+            height: 48px;
+            background: #7c7c7c;
+            border: 3px solid #bebebe;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .selected-block {
+            background: #6b6b6b;
+            padding: 6px 16px;
+            border-radius: 40px;
+            color: #ffe9b6;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        footer {
+            margin-top: 24px;
+            width: 100%;
+            text-align: center;
+            color: #cdcdcd;
+            font-size: 12px;
+            line-height: 1.8;
+            border-top: 2px dashed #777;
+            padding-top: 16px;
+        }
+
+        footer a {
+            color: #aaf0e9;
+            text-decoration: none;
+            border-bottom: 3px solid #3f9188;
+            padding-bottom: 3px;
+            transition: 0.2s;
+        }
+
+        footer a:hover {
+            color: #fff;
+            border-bottom-color: #ffd966;
+        }
+
+        @media (max-width: 600px) {
+            .dpad-btn { width: 60px; height: 60px; font-size: 28px; }
+            .action-btn { padding: 12px 15px; font-size: 18px; }
+            .hotbar { padding: 8px; }
+        }
+
+        @media (max-width: 450px) {
+            .control-panel { flex-direction: column; }
+        }
+
+        .audio-hint {
+            color: #bbb;
+            font-size: 10px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <!-- Obszar gry -->
+        <div class="canvas-container">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+
+        <!-- Panel dotykowy / kontroler mobilny i desktopowy -->
+        <div class="control-panel">
+            <!-- Krzyżak DPAD -->
+            <div class="dpad">
+                <div class="dpad-row">
+                    <button class="dpad-btn" id="btnUp" aria-label="góra">▲</button>
+                </div>
+                <div class="dpad-row">
+                    <button class="dpad-btn" id="btnLeft" aria-label="lewo">◀</button>
+                    <button class="dpad-btn" id="btnDown" aria-label="dół">▼</button>
+                    <button class="dpad-btn" id="btnRight" aria-label="prawo">▶</button>
+                </div>
+            </div>
+
+            <!-- Akcje: kop, postaw, zmiana bloku -->
+            <div class="action-buttons">
+                <button class="action-btn" id="btnMine">⛏️ KOP</button>
+                <button class="action-btn" id="btnPlace">📦 POSTAW</button>
+                <button class="action-btn" id="btnNextBlock">🔄 ZMIEŃ</button>
+            </div>
+
+            <!-- Ekwipunek / hotbar -->
+            <div class="hotbar">
+                <span style="color:#f0e68c; font-size:14px;">BLOK:</span>
+                <div class="block-preview" id="blockPreview">🌿</div>
+                <span class="selected-block" id="blockName">Trawa</span>
+            </div>
+        </div>
+
+        <!-- Autor i dźwięk -->
+        <footer>
+            <div style="margin-bottom:8px;">👑 Damian Kita 👑</div>
+            <div style="font-size:14px; margin-bottom:6px;">
+                <a href="https://linktr.ee/kitadamian" target="_blank" rel="noopener">linktr.ee/kitadamian</a>
+            </div>
+            <div class="audio-hint">
+                🎵 Kliknij / dotknij ekran lub naciśnij klawisz – włącz muzykę tła 🎵
+            </div>
+            <div style="margin-top:8px; color:#bfbfbf;">⛏️ graj jak w Minecraft — kliknij blok (LPM), postaw (PPM) / dotknij i przytrzymaj</div>
+        </footer>
+    </div>
+
+    <script>
+        (function(){
+            "use strict";
+
+            // ---------- ⚙️ KONFIGURACJA ŚWIATA ----------
+            const GRID_SIZE = 15;              // 15x15 – idealne na mobile
+            const BLOCK_TYPES = {
+                AIR: 0,
+                GRASS: 1,
+                DIRT: 2,
+                STONE: 3
+            };
+
+            // ---------- 🧱 STAN GRY ----------
+            let grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(BLOCK_TYPES.AIR));
+            let player = { x: 7, y: 7 };      // start
+            let facing = 'down';              // kierunek (dla przycisków kop/postaw)
+            let selectedBlock = BLOCK_TYPES.GRASS; // domyślnie trawa
+
+            // Canvas i ctx
+            const canvas = document.getElementById('gameCanvas');
+            let ctx = canvas.getContext('2d');
+
+            // ---------- 🎵 AUDIO - Web Audio API (syntezowany dźwięk) ----------
+            let audioCtx = null;
+            let musicInterval = null;
+            let isAudioInitialized = false;
+            let isMusicPlaying = false;
+
+            function initAudioContext() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                return audioCtx;
+            }
+
+            // Efekt dźwiękowy – rozbijanie bloku
+            function playBreakSound() {
+                if (!audioCtx || audioCtx.state !== 'running') return;
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.value = 120;
+                gainNode.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            }
+
+            // Efekt dźwiękowy – stawianie bloku
+            function playPlaceSound() {
+                if (!audioCtx || audioCtx.state !== 'running') return;
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.value = 200;
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.12);
+            }
+
+            // Muzyka w tle – minimalistyczny, zapętlony motyw (Minecraft styl)
+            function startBackgroundMusic() {
+                if (!audioCtx) return;
+                if (musicInterval) clearInterval(musicInterval);
+                
+                // Prosty, wesoły motyw: C5, E5, G5, C6 (podnosi na duchu)
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                let noteIndex = 0;
+                
+                function playNextNote() {
+                    if (!audioCtx || audioCtx.state !== 'running') return;
+                    const now = audioCtx.currentTime;
+                    const osc = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    osc.type = 'sine'; 
+                    osc.frequency.value = notes[noteIndex % notes.length];
+                    gainNode.gain.setValueAtTime(0.08, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                    osc.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.45);
+                    noteIndex++;
+                }
+
+                // graj co 600 ms
+                musicInterval = setInterval(() => {
+                    if (audioCtx && audioCtx.state === 'running') {
+                        playNextNote();
+                    }
+                }, 600);
+                isMusicPlaying = true;
+            }
+
+            function stopBackgroundMusic() {
+                if (musicInterval) {
+                    clearInterval(musicInterval);
+                    musicInterval = null;
+                    isMusicPlaying = false;
+                }
+            }
+
+            // Inicjalizacja audio po gestzie użytkownika (wznowienie kontekstu i start muzyki)
+            function enableAudioAndStartMusic() {
+                initAudioContext();
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume().then(() => {
+                        startBackgroundMusic();
+                    }).catch(e => console.log("Audio resume error", e));
+                } else if (audioCtx && audioCtx.state === 'running') {
+                    if (!isMusicPlaying) startBackgroundMusic();
+                }
+            }
+
+            // ---------- 🌍 GENEROWANIE ŚWIATA (pseudo-losowe, minecraftowy klimat) ----------
+            function generateWorld() {
+                // Wypełnij powietrzem, potem dodaj skały, ziemię, trawę
+                for (let row = 0; row < GRID_SIZE; row++) {
+                    for (let col = 0; col < GRID_SIZE; col++) {
+                        // domyślnie powietrze
+                        grid[row][col] = BLOCK_TYPES.AIR;
+                    }
+                }
+
+                // Otocz granice kamieniem (aby nie uciec poza świat)
+                for (let i = 0; i < GRID_SIZE; i++) {
+                    grid[0][i] = BLOCK_TYPES.STONE;          // góra
+                    grid[GRID_SIZE-1][i] = BLOCK_TYPES.STONE; // dół
+                    grid[i][0] = BLOCK_TYPES.STONE;          // lewo
+                    grid[i][GRID_SIZE-1] = BLOCK_TYPES.STONE; // prawo
+                }
+
+                // Dodajemy klastry trawy, ziemi, kamienia
+                for (let i = 0; i < 35; i++) {
+                    const x = Math.floor(Math.random() * (GRID_SIZE-2)) + 1;
+                    const y = Math.floor(Math.random() * (GRID_SIZE-2)) + 1;
+                    if (grid[y][x] === BLOCK_TYPES.AIR) {
+                        const rand = Math.random();
+                        if (rand < 0.4) grid[y][x] = BLOCK_TYPES.GRASS;
+                        else if (rand < 0.7) grid[y][x] = BLOCK_TYPES.DIRT;
+                        else grid[y][x] = BLOCK_TYPES.STONE;
+                    }
+                }
+
+                // Zapewniamy, że start gracza to powietrze
+                grid[player.y][player.x] = BLOCK_TYPES.AIR;
+                
+                // mała polana w okolicy gracza
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        const nx = player.x + dx, ny = player.y + dy;
+                        if (nx > 0 && nx < GRID_SIZE-1 && ny > 0 && ny < GRID_SIZE-1) {
+                            if (Math.random() > 0.6) grid[ny][nx] = BLOCK_TYPES.AIR;
+                        }
+                    }
+                }
+            }
+
+            // ---------- 🎮 RYSOWANIE ----------
+            function drawGame() {
+                const w = canvas.width;
+                const h = canvas.height;
+                const cellSize = Math.min(w / GRID_SIZE, h / GRID_SIZE);
+                
+                // wyczyść
+                ctx.clearRect(0, 0, w, h);
+                
+                // tło siatki
+                ctx.fillStyle = '#6b6b6b';
+                ctx.fillRect(0, 0, w, h);
+
+                // Rysuj bloki
+                for (let row = 0; row < GRID_SIZE; row++) {
+                    for (let col = 0; col < GRID_SIZE; col++) {
+                        const block = grid[row][col];
+                        if (block === BLOCK_TYPES.AIR) continue;
+
+                        let color;
+                        switch(block) {
+                            case BLOCK_TYPES.GRASS: color = '#4caf50'; break;  // zielony
+                            case BLOCK_TYPES.DIRT: color = '#8b5a2b'; break;   // brąz
+                            case BLOCK_TYPES.STONE: color = '#6d6d6d'; break;  // szary
+                            default: color = '#000';
+                        }
+
+                        ctx.fillStyle = color;
+                        ctx.fillRect(col * cellSize, row * cellSize, cellSize-1, cellSize-1);
+                        
+                        // tekstura – kropki (styl minecraft)
+                        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                        ctx.fillRect(col * cellSize, row * cellSize, cellSize-1, 1);
+                        ctx.fillRect(col * cellSize, row * cellSize, 1, cellSize-1);
+                    }
+                }
+
+                // Rysuj gracza (Steve / Alex)
+                const px = player.x * cellSize;
+                const py = player.y * cellSize;
+                ctx.fillStyle = '#3e8ed0'; // niebieska koszula
+                ctx.fillRect(px+2, py+2, cellSize-5, cellSize-5);
+                ctx.fillStyle = '#f5cba0'; // skóra
+                ctx.fillRect(px+5, py+3, 3, 4);
+                ctx.fillRect(px+cellSize-9, py+3, 3, 4);
+                ctx.fillStyle = '#1a1a1a'; // oczy
+                ctx.fillRect(px+6, py+6, 2, 2);
+                ctx.fillRect(px+cellSize-9, py+6, 2, 2);
+                
+                // ramka gracza
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(px+1, py+1, cellSize-3, cellSize-3);
+
+                // oznaczenie kierunku (mała strzałka)
+                ctx.fillStyle = '#ffe082';
+                ctx.font = `${cellSize*0.5}px 'Press Start 2P'`;
+                ctx.fillText('▼', px + cellSize*0.3, py + cellSize*0.7);
+            }
+
+            // ---------- 🔄 AKTUALIZACJA ROZMIARU CANVAS ----------
+            function resizeCanvas() {
+                const container = document.querySelector('.canvas-container');
+                const containerWidth = container.clientWidth;
+                const containerHeight = container.clientHeight;
+                const size = Math.min(containerWidth, containerHeight);
+                canvas.width = size;
+                canvas.height = size;
+                drawGame();
+            }
+
+            // ---------- 👆 RUCH GRACZA (klawiatura i dotyk) ----------
+            function tryMove(dx, dy, newFacing) {
+                const newX = player.x + dx;
+                const newY = player.y + dy;
+                if (newX >= 0 && newX < GRID_SIZE && newY >= 0 && newY < GRID_SIZE) {
+                    if (grid[newY][newX] === BLOCK_TYPES.AIR) {
+                        player.x = newX;
+                        player.y = newY;
+                        facing = newFacing;
+                        drawGame();
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // ⛏️ Kopanie bloku (sąsiadującego i niepowietrze)
+            function mineBlock(targetX, targetY) {
+                if (targetX === undefined || targetY === undefined) return;
+                if (Math.abs(player.x - targetX) + Math.abs(player.y - targetY) !== 1) return; // tylko sąsiedztwo
+                if (grid[targetY][targetX] !== BLOCK_TYPES.AIR) {
+                    grid[targetY][targetX] = BLOCK_TYPES.AIR;
+                    playBreakSound();
+                    drawGame();
+                }
+            }
+
+            // 📦 Stawianie bloku
+            function placeBlock(targetX, targetY) {
+                if (targetX === undefined || targetY === undefined) return;
+                if (Math.abs(player.x - targetX) + Math.abs(player.y - targetY) !== 1) return;
+                if (grid[targetY][targetX] === BLOCK_TYPES.AIR) {
+                    grid[targetY][targetX] = selectedBlock;
+                    playPlaceSound();
+                    drawGame();
+                }
+            }
+
+            // ---------- 🖱️ OBSŁUGA MYSZY / DOTYKU (canvas) ----------
+            function getGridFromCanvas(clientX, clientY) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const canvasRelativeX = (clientX - rect.left) * scaleX;
+                const canvasRelativeY = (clientY - rect.top) * scaleY;
+                const cellSize = Math.min(canvas.width / GRID_SIZE, canvas.height / GRID_SIZE);
+                const col = Math.floor(canvasRelativeX / cellSize);
+                const row = Math.floor(canvasRelativeY / cellSize);
+                return { col, row };
+            }
+
+            function handleCanvasLeftClick(e) {
+                e.preventDefault();
+                enableAudioAndStartMusic(); // odpal dźwięk przy interakcji
+                const { col, row } = getGridFromCanvas(e.clientX, e.clientY);
+                mineBlock(col, row);
+            }
+
+            function handleCanvasRightClick(e) {
+                e.preventDefault();
+                enableAudioAndStartMusic();
+                const { col, row } = getGridFromCanvas(e.clientX, e.clientY);
+                placeBlock(col, row);
+            }
+
+            // ---------- ⌨️ KLAWIATURA (desktop) ----------
+            function onKeyDown(e) {
+                enableAudioAndStartMusic(); // pierwszy klawisz uruchamia muzykę
+                switch(e.key) {
+                    case 'ArrowUp': e.preventDefault(); tryMove(0, -1, 'up'); break;
+                    case 'ArrowDown': e.preventDefault(); tryMove(0, 1, 'down'); break;
+                    case 'ArrowLeft': e.preventDefault(); tryMove(-1, 0, 'left'); break;
+                    case 'ArrowRight': e.preventDefault(); tryMove(1, 0, 'right'); break;
+                    case ' ': // spacja = kop w kierunku
+                    case 'Space':
+                        e.preventDefault();
+                        mineFacing();
+                        break;
+                    case 'e': case 'E': // postaw
+                        e.preventDefault();
+                        placeFacing();
+                        break;
+                    case 'c': case 'C': // zmień blok
+                        e.preventDefault();
+                        cycleBlock();
+                        break;
+                }
+            }
+
+            // akcje względem kierunku (dla przycisków / klawiatury)
+            function mineFacing() {
+                let dx = 0, dy = 0;
+                if (facing === 'up') dy = -1;
+                else if (facing === 'down') dy = 1;
+                else if (facing === 'left') dx = -1;
+                else if (facing === 'right') dx = 1;
+                const tx = player.x + dx, ty = player.y + dy;
+                mineBlock(tx, ty);
+            }
+
+            function placeFacing() {
+                let dx = 0, dy = 0;
+                if (facing === 'up') dy = -1;
+                else if (facing === 'down') dy = 1;
+                else if (facing === 'left') dx = -1;
+                else if (facing === 'right') dx = 1;
+                const tx = player.x + dx, ty = player.y + dy;
+                placeBlock(tx, ty);
+            }
+
+            // 🔄 cykl bloków
+            function cycleBlock() {
+                if (selectedBlock === BLOCK_TYPES.GRASS) selectedBlock = BLOCK_TYPES.DIRT;
+                else if (selectedBlock === BLOCK_TYPES.DIRT) selectedBlock = BLOCK_TYPES.STONE;
+                else if (selectedBlock === BLOCK_TYPES.STONE) selectedBlock = BLOCK_TYPES.GRASS;
+                updateHotbarUI();
+                drawGame();
+            }
+
+            function updateHotbarUI() {
+                const preview = document.getElementById('blockPreview');
+                const nameEl = document.getElementById('blockName');
+                if (selectedBlock === BLOCK_TYPES.GRASS) {
+                    preview.innerText = '🌿'; nameEl.innerText = 'Trawa';
+                } else if (selectedBlock === BLOCK_TYPES.DIRT) {
+                    preview.innerText = '🟫'; nameEl.innerText = 'Ziemia';
+                } else {
+                    preview.innerText = '🪨'; nameEl.innerText = 'Kamień';
+                }
+            }
+
+            // ---------- 📱 OBSŁUGA PRZYCISKÓW DOTYKOWYCH ----------
+            function bindControls() {
+                document.getElementById('btnUp').addEventListener('click', (e) => { e.preventDefault(); enableAudioAndStartMusic(); tryMove(0, -1, 'up'); });
+                document.getElementById('btnDown').addEventListener('click', (e) => { e.preventDefault(); enableAudioAndStartMusic(); tryMove(0, 1, 'down'); });
+                document.getElementById('btnLeft').addEventListener('click', (e) => { e.preventDefault(); enableAudioAndStartMusic(); tryMove(-1, 0, 'left'); });
+                document.getElementById('btnRight').addEventListener('click', (e) => { e.preventDefault(); enableAudioAndStartMusic(); tryMove(1, 0, 'right'); });
+                document.getElementById('btnMine').addEventListener('click', (e) => { e.preventDefault(); enableAudioAndStartMusic(); mineFacing(); });
+                document.getElementById('btnPlace').addEventListener('click', (e) => { e.preventDefault(); enableAudioAndStartMusic(); placeFacing(); });
+                document.getElementById('btnNextBlock').addEventListener('click', (e) => { e.preventDefault(); enableAudioAndStartMusic(); cycleBlock(); });
+            }
+
+            // ---------- 🚀 INICJALIZACja ----------
+            window.addEventListener('load', ()=>{
+                generateWorld();
+                resizeCanvas();
+                bindControls();
+                updateHotbarUI();
+
+                // Eventy canvas
+                canvas.addEventListener('click', handleCanvasLeftClick);
+                canvas.addEventListener('contextmenu', handleCanvasRightClick);
+                // Touch dla urządzeń dotykowych (zapobiega context menu)
+                canvas.addEventListener('touchstart', (e) => { 
+                    e.preventDefault(); 
+                    enableAudioAndStartMusic(); 
+                    if (e.touches.length === 1) {
+                        const touch = e.touches[0];
+                        // rozróżnienie: pojedynczy dotyk to kopanie (lewy)
+                        const { col, row } = getGridFromCanvas(touch.clientX, touch.clientY);
+                        mineBlock(col, row);
+                    }
+                }, { passive: false });
+
+                // długie przytrzymanie na mobile = postawienie (prawego kliknięcia brak)
+                let longPressTimer;
+                canvas.addEventListener('touchstart', (e) => {
+                    if (e.touches.length === 1) {
+                        longPressTimer = setTimeout(() => {
+                            const touch = e.touches[0];
+                            const { col, row } = getGridFromCanvas(touch.clientX, touch.clientY);
+                            placeBlock(col, row);
+                        }, 500); // pół sekundy
+                    }
+                });
+                canvas.addEventListener('touchend', () => clearTimeout(longPressTimer));
+                canvas.addEventListener('touchcancel', () => clearTimeout(longPressTimer));
+                canvas.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
+                window.addEventListener('keydown', onKeyDown);
+                window.addEventListener('resize', resizeCanvas);
+
+                // Auto-start audio przy pierwszym kliknięciu gdziekolwiek (zgodnie z polityką)
+                document.body.addEventListener('click', enableAudioAndStartMusic, { once: true });
+                document.body.addEventListener('touchstart', enableAudioAndStartMusic, { once: true });
+            });
+
+        })();
+    </script>
+</body>
+</html>
